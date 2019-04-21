@@ -2,41 +2,63 @@ defmodule PbtTest do
   use ExUnit.Case
   use PropCheck
 
-  property "always works" do
-    forall type <- my_type() do
-      boolean(type)
-    end
-  end
 
   property "finds biggest element" do
     forall x <- integer() |> list() |> non_empty() do
-      biggest(x) == x |> Enum.sort |> List.last
+      Pbt.biggest(x) == model_biggest(x)
     end
   end
 
-  defp boolean(_) do
+  def model_biggest(list) do
+    list |> Enum.sort() |> List.last()
+  end
+
+  property "picks the last number" do
+    forall {list, known_last} <- { number() |> list(), number() } do
+      known_list = list ++ [known_last]
+      known_last == List.last(known_list)
+    end
+  end
+
+  property "a sorted list has ordered pairs" do
+    forall list <- term() |> list() do
+      list |> Enum.sort |> ordered?()
+    end
+  end
+
+  def ordered?([a, b| t]) do
+    a <= b and ordered?([ b | t])
+  end
+
+  def ordered?(_) do
     true
   end
 
-  def my_type() do
-    term()
+  property "a sorted list keeps its size" do
+    forall l <- number() |> list() do
+      length(l) == Enum.sort(l) |> length()
+    end
   end
 
-  # This is a fake function to test
-  def biggest([head | tail]) do
-    biggest(tail, head)
+  property "no element added" do
+    forall l <- number() |> list() do
+      sorted = Enum.sort(l) 
+      Enum.all?(sorted, fn element -> element in l end)
+    end    
   end
 
-  defp biggest([], max) do
-    max
+  property "no element deleted" do
+    forall l <- number() |> list() do
+      sorted = Enum.sort(l) 
+      Enum.all?(l, fn element -> element in sorted end)
+    end    
   end
 
-  defp biggest([head | tail], max) when head >= max do
-    biggest(tail, head)
-  end
-
-  defp biggest([head | tail], max) when head < max do
-    biggest(tail, max)
+  property "symmetric encoding/decoding" do
+    forall data <- list( {atom(), any()} ) do
+      encoded = encode(data)
+      is_binary(encoded) and data == decode(encoded)
+    end
   end
 
 end
