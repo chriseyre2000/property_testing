@@ -78,5 +78,124 @@ defmodule GeneratorsTest do
     length(for <<c::utf8 <- str>>, punctuation?.(c), do: 1)
   end
 
+  property "resize", [:verbose] do
+    forall bin <- resize(150, binary()) do
+      collect(is_binary(bin), to_range(10, byte_size(bin)))
+    end
+  end
 
+  property "profile 1", [:verbose] do
+    forall profile <- [
+      name: resize(10, utf8()),
+      age: pos_integer(),
+      bio: resize(350, utf8())
+    ] do
+      name_len = to_range(10, String.length(profile[:name]))
+      bio_len = to_range(300, String.length(profile[:bio]))
+      aggregate(true, name: name_len, bio: bio_len)
+    end
+  end
+
+  property "profile 2", [:verbose] do
+    forall profile <- [
+      name: utf8(),
+      age: pos_integer(),
+      bio: sized(s, resize(s * 35, utf8()))
+    ] do
+      name_len = to_range(10, String.length(profile[:name]))
+      bio_len = to_range(300, String.length(profile[:bio]))
+      aggregate(true, name: name_len, bio: bio_len)     
+    end
+  end
+
+  property "naive queue generation" do
+    forall list <- list({term(), term()}) do
+      q = :queue.from_list(list)
+      :queue.is_queue(q)
+    end
+  end
+
+  property "queue with let macro" do
+    forall q <- queue() do
+      :queue.is_queue(q)
+    end
+  end
+
+  def queue() do
+    let list <- list({term(), term()}) do
+      :queue.from_list(list)
+    end
+  end
+
+  def non_empty(list_type) do
+    such_that l <- list_type, when: l != [] and l != <<>>
+  end
+
+  def non_empty_map(gen) do
+    such_that g <- gen, when: g != %{} 
+  end
+
+  def even(), do: let n <- integer(), do: n * 2
+  def uneven(), do: let n <-integer(), do: n * 2 + 1
+
+  def text_like() do
+    let l <- list(
+      frequency([
+        {80, range(?a, ?z)},
+        {10, ?\s},
+        {1, ?\n},
+        {1, oneof([?., ?-, ?!, ??, ?,])},
+        {1, range(?0, ?9)}
+      ])
+    ) do
+      to_string(l)
+    end
+  end
+
+  def mostly_sorted() do
+    gen = list(
+      frequency([
+        {5, sorted_list()},
+        {1, list()}
+      ])
+    )
+
+    let lists <- gen, do: Enum.concat(lists)
+  end
+
+  def sorted_list() do
+    let l <- list(), do: Enum.sort(l)
+  end
+
+  def path() do
+    path({0,0}, [], %{{0,0} => :seen}, [])
+  end
+
+  def path(_current, acc, _seen, [_,_,_,_]) do
+    acc
+  end
+
+  def path(current, acc, seen, ignore) do
+    frequency([
+      {1, acc},
+      {15, increase_path(current, acc, seen, ignore)}
+    ])
+  end
+
+  def increase_path(current, acc, seen, ignore) do
+    let direction <- oneof([:left, :right, :up, :down] -- ignore) do
+      new_pos = move(direction, current)
+      case seen do
+        %{^new_pos => _} ->
+          path(current, acc, seen, [direction|ignore])
+        _ ->
+          path(new_pos, [direction|acc], Map.put(seen, new_pos, :seen), [])
+      end
+    end
+  end
+
+  def move(:left, {x,y}), do: {x-1, y}
+  def move(:right, {x,y}), do: {x+1, y}
+  def move(:up, {x,y}), do: {x, y+1}
+  def move(:down, {x,y}), do: {x, y-1}
 end
