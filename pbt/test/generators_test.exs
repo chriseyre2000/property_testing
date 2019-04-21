@@ -178,7 +178,7 @@ defmodule GeneratorsTest do
   def path(current, acc, seen, ignore) do
     frequency([
       {1, acc},
-      {15, increase_path(current, acc, seen, ignore)}
+      {15, lazy(increase_path(current, acc, seen, ignore))}
     ])
   end
 
@@ -198,4 +198,32 @@ defmodule GeneratorsTest do
   def move(:right, {x,y}), do: {x+1, y}
   def move(:up, {x,y}), do: {x, y+1}
   def move(:down, {x,y}), do: {x, y-1}
+
+  def dict_gen() do
+    let( x <- list({integer(), integer()}), do: :dict.from_list(x))
+  end
+
+  def dict_symb() do
+    sized(size, dict_symb(size, {:call, :dict, :new, []}))
+  end  
+
+  def dict_symb(0, dict), do: dict
+
+  def dict_symb(n, dict) do
+    dict_symb(n - 1, {:call, :dict, :store, [integer(), integer(), dict]})
+  end
+
+  def dict_autosymb() do
+    sized(size, dict_autosymb(size, {:"$call", :dict, :new, []}))
+  end
+
+  def dict_autosymb(0, dict), do: dict
+
+  def dict_autosymb(n, dict) do
+    dict_autosymb(n - 1,
+    {:"$call", :dict, :store, [integer(), integer(), dict]}
+    )
+  end
+
+
 end
