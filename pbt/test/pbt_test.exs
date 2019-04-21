@@ -2,7 +2,6 @@ defmodule PbtTest do
   use ExUnit.Case
   use PropCheck
 
-
   property "finds biggest element" do
     forall x <- integer() |> list() |> non_empty() do
       Pbt.biggest(x) == model_biggest(x)
@@ -56,8 +55,8 @@ defmodule PbtTest do
 
   property "symmetric encoding/decoding" do
     forall data <- list( {atom(), any()} ) do
-      encoded = encode(data)
-      is_binary(encoded) and data == decode(encoded)
+      encoded = Pbt.encode(data)
+      is_binary(encoded) and data == Pbt.decode(encoded)
     end
   end
 

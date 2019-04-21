@@ -16,4 +16,7 @@ defmodule Pbt do
     biggest(tail, max)
   end
 
+  def encode(t), do: :erlang.term_to_binary(t)
+  def decode(t), do: :erlang.binary_to_term(t)
+
 end
