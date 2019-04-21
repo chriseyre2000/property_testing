@@ -1,11 +1,20 @@
+#---
+# Excerpted from "Property-Based Testing with PropEr, Erlang, and Elixir",
+# published by The Pragmatic Bookshelf.
+# Copyrights apply to this code. It may not be used to create training material,
+# courses, books, articles, and the like. Contact us if you are in doubt.
+# We make no guarantees that this code is fit for any purpose.
+# Visit http://www.pragmaticprogrammer.com/titles/fhproper for more book information.
+#---
 defmodule Bday.Csv do
   def encode([]), do: ""
 
   def encode(maps) do
-    keys = maps |> hd |> Map.keys() |> Enum.map_join( ",", &escape/1 )
-    vals = 
-      for map <- maps, do: map |> Map.values() |> Enum.map_join(",", &escape/1)
-  
+    keys = Enum.map_join(Map.keys(hd(maps)), ",", &escape(&1))
+
+    vals =
+      for map <- maps, do: Enum.map_join(Map.values(map), ",", &escape(&1))
+
     to_string([keys, "\r\n", Enum.join(vals, "\r\n")])
   end
 
@@ -18,15 +27,15 @@ defmodule Bday.Csv do
   end
 
   defp escape(field) do
-    if escapable?(field) do
+    if escapable(field) do
       ~s|"| <> do_escape(field) <> ~s|"|
-    else  
+    else
       field
     end
   end
 
-  defp escapable?(string) do
-    String.contains?(string, [~s|"/, ",", "\r", "\n"|])
+  defp escapable(string) do
+    String.contains?(string, [~s|"|, ",", "\r", "\n"])
   end
 
   defp do_escape(""), do: ""
@@ -57,30 +66,30 @@ defmodule Bday.Csv do
   defp decode_name(~s|"| <> rest), do: decode_quoted(rest)
   defp decode_name(string), do: decode_unquoted(string)
 
-  defp decode_field(~s/"/ <> rest), do: decode_quoted(rest)
+  defp decode_field(~s|"| <> rest), do: decode_quoted(rest)
   defp decode_field(string), do: decode_unquoted(string)
 
   defp decode_quoted(string), do: decode_quoted(string, "")
 
   defp decode_quoted(~s|"|, acc), do: {:done, acc, ""}
   defp decode_quoted(~s|"\r\n| <> rest, acc), do: {:done, acc, rest}
-
   defp decode_quoted(~s|",| <> rest, acc), do: {:ok, acc, rest}
+
   defp decode_quoted(~s|""| <> rest, acc) do
     decode_quoted(rest, acc <> ~s|"|)
   end
-  
+
   defp decode_quoted(<<char>> <> rest, acc) do
     decode_quoted(rest, acc <> <<char>>)
   end
-  
+
   defp decode_unquoted(string), do: decode_unquoted(string, "")
+
   defp decode_unquoted("", acc), do: {:done, acc, ""}
   defp decode_unquoted("\r\n" <> rest, acc), do: {:done, acc, rest}
   defp decode_unquoted("," <> rest, acc), do: {:ok, acc, rest}
+
   defp decode_unquoted(<<char>> <> rest, acc) do
     decode_unquoted(rest, acc <> <<char>>)
   end
-
-
 end
