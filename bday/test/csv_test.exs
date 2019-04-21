@@ -28,7 +28,7 @@ defmodule CsvTest do
       end
     end
   end
-
+ 
 
   def entry(size, keys) do
     let vals <- record(size) do
